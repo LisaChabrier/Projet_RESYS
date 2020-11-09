@@ -33,6 +33,7 @@ and at Gene Cards.
 
 # Exemples : 
 ```{r cars}
+library("RTN")
 summary(cars)
 ```
 
