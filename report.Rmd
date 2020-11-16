@@ -31,18 +31,169 @@ the inferred network and the obtained signature.
 - Get biological insight into these putative master regulators at the Human Protein Atlas
 and at Gene Cards.
 
-# Exemples : 
-```{r cars}
-library("RTN")
-summary(cars)
+```{r}
+library(rstudioapi) # Set working directory
+library(RTN) # Infer regulatory network based on the downloaded gene expression data
+library(snow) # Parallel processing in RTN
+library(RedeR) # Better visualization of the network
+library(CoRegNet) # Get the human TFs
+library(lumi) # Convert nuID > entrezID
+library(lumiHumanIDMapping) # Convert nuID > entrezID
+
+data("HumanTF_entrezgene")
+
+# Design matrix : G0 = no mestatases.
+
+#### Getting the path of your current open file ####
+current_path = rstudioapi::getActiveDocumentContext()$path 
+setwd(dirname(current_path ))
+print(getwd())
 ```
 
-## Including Plots
+```{r}
+################################################################
+####   Loading & preprocessing the data  ####
+################################################################
+library(Biobase)
+library(GEOquery)
+library(limma)
 
-You can also embed plots, for example:
+#### load series and platform data from GEO ####
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+gset <- getGEO("GSE21257", GSEMatrix =TRUE, AnnotGPL=FALSE)
+if (length(gset) > 1) idx <- grep("GPL10295", attr(gset, "names")) else idx <- 1
+gset <- gset[[idx]]
+
+# make proper column names to match toptable 
+fvarLabels(gset) <- make.names(fvarLabels(gset))
+
+# group names for all samples
+gsms <- "11111111111111111111100001111011010001010011110000000"
+sml <- c()
+for (i in 1:nchar(gsms)) { sml[i] <- substr(gsms,i,i) }
+
+#### log2 transform ####
+ex <- exprs(gset)
+qx <- as.numeric(quantile(ex, c(0., 0.25, 0.5, 0.75, 0.99, 1.0), na.rm=T))
+LogC <- (qx[5] > 100) ||
+  (qx[6]-qx[1] > 50 && qx[2] > 0) ||
+  (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2)
+if (LogC) { ex[which(ex <= 0)] <- NaN
+exprs(gset) <- log2(ex) }
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+################################################################
+####    Network inference     ####
+################################################################
+
+#### Preprocessing ####
+exEntrez <- ex
+nuIDtoEntrez <- as.matrix(nuID2EntrezID(nuID = rownames(ex), lib.mapping = 'lumiHumanIDMapping'))
+nuIDtoEntrez <- cbind(nuIDtoEntrez, rownames(nuIDtoEntrez))
+nuIDtoEntrez <- nuIDtoEntrez[which(nuIDtoEntrez[,1] != ""),] # Filter nuID without entrezID
+exEntrez <- subset(exEntrez, rownames(exEntrez) %in% nuIDtoEntrez[,2]) # Subset exEntrez with nuID in both exEntrez & nuIDtoEntrez
+rownames(exEntrez) <- nuIDtoEntrez[,1]
+exEntrez <- exEntrez[!duplicated(rownames(exEntrez)),] # Remove duplicated rownames
+
+#### Transcriptional Network Inference ####
+rtni <- tni.constructor(expData = as.matrix(exEntrez),
+                        regulatoryElements = HumanTF_entrezgene)
+rtni <- tni.permutation(rtni, nPermutations = 100)
+rtni <- tni.bootstrap(rtni)
+rtni <- tni.dpi.filter(rtni)
+tni.regulon.summary(rtni)
+g <- tni.graph(rtni, tfs = HumanTF_entrezgene)
+
+# Visualization on RedeR
+rdp <- RedPort()
+calld(rdp, checkcalls=T)
+addGraph(rdp, g, layout=NULL)
+addLegend.color(rdp, g, type="edge")
+addLegend.shape(rdp, g)
+relax(rdp, ps = TRUE)
+```
+
+```{r}
+################################################################
+####    Differential gene expression analysis   ####
+################################################################
+
+# set up the data and proceed with analysis
+sml <- paste("G", sml, sep="")    # set group names
+fl <- as.factor(sml)
+gset$description <- fl
+design <- model.matrix(~ description + 0, gset)
+colnames(design) <- levels(fl)
+fit <- lmFit(gset, design)
+cont.matrix <- makeContrasts(G1-G0, levels=design)
+fit2 <- contrasts.fit(fit, cont.matrix)
+fit2 <- eBayes(fit2, 0.01)
+tT <- topTable(fit2, adjust="fdr", sort.by="B", number=250)
+
+tT <- subset(tT, select=c("ID","adj.P.Val","P.Value","t","B","logFC","GB_ACC","SEQUENCE"))
+write.table(tT, file=stdout(), row.names=F, sep="\t")
+
+#### Volcano plots ####
+volcanoplot(fit2, highlight = 15) # Improve quality of the figure
+
+# Possibly add heatmaps, pathways analysis, GSEA ...
+```
+
+```{r}
+################################################################
+####    Transcriptional Network Analysis    ####
+################################################################
+
+tTb <- subset(tT, tT$B >= 1.9)
+tTb.entrez <- nuID2EntrezID(tTb$ID, lib.mapping = 'lumiHumanIDMapping')
+tTb <- cbind(tTb, tTb.entrez)
+tTb <- tTb[which(tTb$tTb.entrez != ""),]
+tTb <- tTb[!duplicated(tTb$tTb.entrez),]
+
+b.stat <- tTb$B # Choice was made to work on B stat = prob that a gene is truly differentially expressed. Could be switch with the Log2FC
+names(b.stat) <- tTb$tTb.entrez
+tTb.hits <- tTb$tTb.entrez
+tTb.hits <- as.character(tTb.hits)
+rtna <- tni2tna.preprocess(object = rtni,
+                           phenotype = b.stat,
+                           hits = tTb.hits)
+
+# Bug with tni2tna
+```
+
+```{r}
+# Useful ?
+################################################################
+####   Boxplot for selected GEO samples   ####
+################################################################
+library(Biobase)
+library(GEOquery)
+
+# load series and platform data from GEO
+
+gset <- getGEO("GSE21257", GSEMatrix =TRUE, getGPL=FALSE)
+if (length(gset) > 1) idx <- grep("GPL10295", attr(gset, "names")) else idx <- 1
+gset <- gset[[idx]]
+
+# group names for all samples in a series
+gsms <- "11111111111111111111100001111011010001010011110000000"
+sml <- c()
+for (i in 1:nchar(gsms)) { sml[i] <- substr(gsms,i,i) }
+sml <- paste("G", sml, sep="")  # set group names
+
+# order samples by group
+ex <- exprs(gset)[ , order(sml)]
+sml <- sml[order(sml)]
+fl <- as.factor(sml)
+labels <- c("no+metastases","metastases")
+
+# set parameters and draw the plot
+palette(c("#f4dfdf","#dfeaf4", "#AABBCC"))
+dev.new(width=4+dim(gset)[[2]]/5, height=6)
+par(mar=c(2+round(max(nchar(sampleNames(gset)))/2),4,2,1))
+title <- paste ("GSE21257", '/', annotation(gset), " selected samples", sep ='')
+boxplot(ex, boxwex=0.6, notch=T, main=title, outline=FALSE, las=2, col=fl)
+legend("topleft", labels, fill=palette(), bty="n")
+```
+
