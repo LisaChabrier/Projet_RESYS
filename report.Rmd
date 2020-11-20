@@ -90,7 +90,7 @@ exprs(gset) <- log2(ex) }
 
 #### Preprocessing ####
 rowAnnotation <- as.matrix(nuID2EntrezID(nuID = rownames(ex), lib.mapping = 'lumiHumanIDMapping'))
-rowAnnotation <- cbind(nuIDtoEntrez, rownames(nuIDtoEntrez))
+rowAnnotation <- cbind(rowAnnotation, rownames(rowAnnotation))
 colnames(rowAnnotation) <- c("entrez", "nuID")
 rowAnnotation <- rowAnnotation[,c("nuID", "entrez")]
 
