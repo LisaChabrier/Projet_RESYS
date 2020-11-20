@@ -88,29 +88,83 @@ exprs(gset) <- log2(ex) }
 ################################################################
 
 #### Preprocessing ####
-exEntrez <- ex
-nuIDtoEntrez <- as.matrix(nuID2EntrezID(nuID = rownames(ex), lib.mapping = 'lumiHumanIDMapping'))
-nuIDtoEntrez <- cbind(nuIDtoEntrez, rownames(nuIDtoEntrez))
-nuIDtoEntrez <- nuIDtoEntrez[which(nuIDtoEntrez[,1] != ""),] # Filter nuID without entrezID
-exEntrez <- subset(exEntrez, rownames(exEntrez) %in% nuIDtoEntrez[,2]) # Subset exEntrez with nuID in both exEntrez & nuIDtoEntrez
-rownames(exEntrez) <- nuIDtoEntrez[,1]
-exEntrez <- exEntrez[!duplicated(rownames(exEntrez)),] # Remove duplicated rownames
+rowAnnotation <- as.matrix(nuID2EntrezID(nuID = rownames(ex), lib.mapping = 'lumiHumanIDMapping'))
+rowAnnotation <- cbind(nuIDtoEntrez, rownames(nuIDtoEntrez))
+colnames(rowAnnotation) <- c("entrez", "nuID")
+rowAnnotation <- rowAnnotation[,c("nuID", "entrez")]
 
-#### Transcriptional Network Inference ####
-rtni <- tni.constructor(expData = as.matrix(exEntrez),
-                        regulatoryElements = HumanTF_entrezgene)
-rtni <- tni.permutation(rtni, nPermutations = 100)
-rtni <- tni.bootstrap(rtni)
-rtni <- tni.dpi.filter(rtni)
-tni.regulon.summary(rtni)
-g <- tni.graph(rtni, tfs = HumanTF_entrezgene)
+#### TFs from immune cell types of interest ####
+macrophage <- c("ATM", "JUN", "CEBPB", "CREB1", "IRF1", "IRF4", "IRF5", 
+                "IRF7", "IRF8", "MKI67", "MNDA", "NFKB1", "TP53", "PCNA", 
+                "PPARG", "SPI1", "SSRP1", "STAT1", "STAT3", "STAT6", "XBP1")
+macrophage <- mapIds(org.Hs.eg.db, macrophage, "ENTREZID", "SYMBOL")
+
+Bcell <- c("BACH2", "BCL6", "PRDM1", "IRF4", "IRF8", "PAX5", "SPI1", 
+           "STAT5", "XBP1")
+Bcell <- mapIds(org.Hs.eg.db, Bcell, "ENTREZID", "SYMBOL")
+
+Tcell <- c("IKZF3", "ATM", "BATF", "BCL6", "PRDM1", "FOXP3", "GATA3",
+           "IKZF2", "IKZF1", "IRF4", "IRF7", "MKI67", "NFKB1", "TP53",
+           "PCNA", "SSRP1", "STAT1", "STAT4", "TBX21", "TCL1", "ZBTB7B",
+           "ZAP70")
+Tcell <- mapIds(org.Hs.eg.db, Tcell, "ENTREZID", "SYMBOL")
+
+#### Transcriptional Network Inference for the macrophage TFs ####
+rtni_macro <- tni.constructor(expData = as.matrix(ex),
+                        regulatoryElements = macrophage,
+                        rowAnnotation = rowAnnotation)
+rtni_macro <- tni.permutation(rtni_macro, nPermutations = 100)
+rtni_macro <- tni.bootstrap(rtni_macro)
+rtni_macro <- tni.dpi.filter(rtni_macro)
+tni.regulon.summary(rtni_macro)
+g_macro <- tni.graph(rtni_macro, tfs = macrophage)
 
 # Visualization on RedeR
 rdp <- RedPort()
 calld(rdp, checkcalls=T)
-addGraph(rdp, g, layout=NULL)
-addLegend.color(rdp, g, type="edge")
-addLegend.shape(rdp, g)
+addGraph(rdp, g_macro, layout=NULL)
+addLegend.color(rdp, g_macro, type="edge")
+addLegend.shape(rdp, g_macro)
+relax(rdp, ps = TRUE)
+```
+
+```{r}
+#### Transcriptional Network Inference for the B cell TFs####
+rtni_Bcell <- tni.constructor(expData = as.matrix(ex),
+                              regulatoryElements = Bcell,
+                              rowAnnotation = rowAnnotation)
+rtni_Bcell <- tni.permutation(rtni_Bcell, nPermutations = 100)
+rtni_Bcell <- tni.bootstrap(rtni_Bcell)
+rtni_Bcell <- tni.dpi.filter(rtni_Bcell)
+tni.regulon.summary(rtni_Bcell)
+g_Bcell <- tni.graph(rtni_Bcell, tfs = Bcell)
+
+# Visualization on RedeR
+rdp <- RedPort()
+calld(rdp, checkcalls=T)
+addGraph(rdp, g_Bcell, layout=NULL)
+addLegend.color(rdp, g_Bcell, type="edge")
+addLegend.shape(rdp, g_Bcell)
+relax(rdp, ps = TRUE)
+```
+
+```{r}
+#### Transcriptional Network Inference for the T cell TFs####
+rtni_Tcell <- tni.constructor(expData = as.matrix(ex),
+                              regulatoryElements = Tcell,
+                              rowAnnotation = rowAnnotation)
+rtni_Tcell <- tni.permutation(rtni_Tcell, nPermutations = 100)
+rtni_Tcell <- tni.bootstrap(rtni_Tcell)
+rtni_Tcell <- tni.dpi.filter(rtni_Tcell)
+tni.regulon.summary(rtni_Tcell)
+g_Tcell <- tni.graph(rtni_Tcell, tfs = Tcell)
+
+# Visualization on RedeR
+rdp <- RedPort()
+calld(rdp, checkcalls=T)
+addGraph(rdp, g_Tcell, layout=NULL)
+addLegend.color(rdp, g_Tcell, type="edge")
+addLegend.shape(rdp, g_Tcell)
 relax(rdp, ps = TRUE)
 ```
 
@@ -148,18 +202,59 @@ volcanoplot(fit2, highlight = 15) # Improve quality of the figure
 tTb <- subset(tT, tT$B >= 1.9)
 tTb.entrez <- nuID2EntrezID(tTb$ID, lib.mapping = 'lumiHumanIDMapping')
 tTb <- cbind(tTb, tTb.entrez)
-tTb <- tTb[which(tTb$tTb.entrez != ""),]
-tTb <- tTb[!duplicated(tTb$tTb.entrez),]
+tT.entrez <- nuID2EntrezID(tT$ID, lib.mapping = 'lumiHumanIDMapping')
+tT <- cbind(tT, tT.entrez)
 
-b.stat <- tTb$B # Choice was made to work on B stat = prob that a gene is truly differentially expressed. Could be switch with the Log2FC
-names(b.stat) <- tTb$tTb.entrez
-tTb.hits <- tTb$tTb.entrez
+b.stat <- tT$B
+names(b.stat) <- rownames(tT)
+logFC <- tT$logFC
+names(logFC) <- rownames(tT)
+tTb.hits <- rownames(tTb)
 tTb.hits <- as.character(tTb.hits)
-rtna <- tni2tna.preprocess(object = rtni,
-                           phenotype = b.stat,
-                           hits = tTb.hits)
+phenoID <- rownames(tT)
+phenoID <- cbind(phenoID, tT.entrez)
 
-# Bug with tni2tna
+###
+### Modify rtna object using the rtni of interest
+###
+# Input 1: 'object', a TNI object with regulons
+# Input 2: 'phenotype', a named numeric vector, usually log2 differential expression levels
+# Input 3: 'hits', a character vector, usually a set of differentially expressed genes
+# Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
+rtna <- tni2tna.preprocess(object = rtni,
+                           phenotype = logFC,
+                           hits = tTb.hits,
+                           phenoIDs = phenoID) # problem here
+
+# Run the MRA method
+rtna <- tna.mra(rtna)
+
+# Get MRA results;
+#..setting 'ntop = -1' will return all results, regardless of a threshold
+mra <- tna.get(rtna, what="mra", ntop = -1)
+head(mra)
+
+# Run the GSEA method
+# Please set nPermutations >= 1000
+rtna <- tna.gsea1(rtna, stepFilter=FALSE, nPermutations=100)
+
+# Get GSEA results
+gsea1 <- tna.get(rtna, what="gsea1", ntop = -1)
+head(gsea1)
+
+# Plot GSEA results
+tna.plot.gsea1(rtna, labPheno="abs(log2 fold changes)", ntop = -1)
+
+# Run the GSEA-2T method
+# Please set nPermutations >= 1000
+rtna <- tna.gsea2(rtna, stepFilter = FALSE, nPermutations = 100)
+
+# Get GSEA-2T results
+gsea2 <- tna.get(rtna, what = "gsea2", ntop = -1)
+head(gsea2$differential)
+
+# Plot GSEA-2T results
+tna.plot.gsea2(rtna, labPheno="log2 fold changes", tfs="PTTG1")
 ```
 
 ```{r}
