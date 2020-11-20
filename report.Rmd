@@ -39,6 +39,7 @@ library(RedeR) # Better visualization of the network
 library(CoRegNet) # Get the human TFs
 library(lumi) # Convert nuID > entrezID
 library(lumiHumanIDMapping) # Convert nuID > entrezID
+library(org.Hs.eg.db) # Convert TFs SYMBOLS into ENTREZ
 
 data("HumanTF_entrezgene")
 
