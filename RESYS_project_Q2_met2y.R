@@ -32,6 +32,11 @@ gset <- getGEO("GSE21257", GSEMatrix =TRUE, AnnotGPL=FALSE)
 if (length(gset) > 1) idx <- grep("GPL10295", attr(gset, "names")) else idx <- 1
 gset <- gset[[idx]]
 
+nuID_noNAs <- read.delim("./NU_IDs.txt", sep = "\t", header = F)
+# We are using a file with the nuIDs since GEO is providing an _ex_ dataset
+# with NAs in the rownames      
+gset@featureData@data$ID <- as.character(nuID_noNAs[,1])
+
 # make proper column names to match toptable 
 fvarLabels(gset) <- make.names(fvarLabels(gset))
 

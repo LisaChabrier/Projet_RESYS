@@ -29,6 +29,11 @@ library(limma)
 gset <- getGEO("GSE21257", GSEMatrix =TRUE, AnnotGPL=FALSE)
 if (length(gset) > 1) idx <- grep("GPL10295", attr(gset, "names")) else idx <- 1
 gset <- gset[[idx]]
+             
+nuID_noNAs <- read.delim("./NU_IDs.txt", sep = "\t", header = F)
+# We are using a file with the nuIDs since GEO is providing an _ex_ dataset
+# with NAs in the rownames      
+gset@featureData@data$ID <- as.character(nuID_noNAs[,1])
 
 # make proper column names to match toptable 
 fvarLabels(gset) <- make.names(fvarLabels(gset))
@@ -53,6 +58,7 @@ exprs(gset) <- log2(ex) }
 
 #### Preprocessing ####
 exEntrez <- ex
+rownames(exEntrez) <- rownames(ex)
 rowAnnotation <- as.matrix(nuID2EntrezID(nuID = rownames(ex), lib.mapping = 'lumiHumanIDMapping'))
 rowAnnotation <- cbind(rowAnnotation, rownames(rowAnnotation))
 rowAnnotation <- rowAnnotation[which(rowAnnotation[,1] != ""),] # Filter nuID without entrezID
@@ -61,7 +67,7 @@ rowAnnotation <- rowAnnotation[!duplicated(rowAnnotation[,1]),]
 rowAnnotation[,1] <- as.numeric(rowAnnotation[,1])
 
 exEntrez <- cbind(exEntrez, as.numeric(nuID2EntrezID(nuID = rownames(ex), lib.mapping = 'lumiHumanIDMapping')))
-exEntrez <- subset(exEntrez, exEntrez[,54] %in% rowAnnotation[,1]) # Subset exEntrez with nuID in both exEntrez & nuIDtoEntrez
+exEntrez <- subset(exEntrez, exEntrez[,54] %in% rowAnnotation[,1]) # Subset exEntrez with nuID in both exEntrez & rowAnnotation
 rownames(exEntrez) <- as.numeric(as.vector(exEntrez[,54]))
 exEntrez <- exEntrez[,-54]
 exEntrez <- exEntrez[!duplicated(rownames(exEntrez)),] # Remove duplicated rownames
