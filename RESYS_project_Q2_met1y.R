@@ -102,6 +102,21 @@ rtni_macro <- tni.dpi.filter(rtni_macro)
 tni.regulon.summary(rtni_macro)
 g_macro <- tni.graph(rtni_macro, tfs = macrophage)
 
+# igraph metrics
+print(paste('Combined score :',
+            length(V(g_macro)), 'nodes and',
+            length(E(g_macro)), 'edges'))
+table(degree(g_macro))
+print(paste("Mean degree :", mean(degree(g_macro))))
+print(paste("Median degree :", median(degree(g_macro))))
+hist(table(degree(g_macro)))
+plot(table(degree(g_macro)), xlab = "Degree", 
+     ylab = "Occurences", main = "Macrophage")
+plot(1:length(degree_distribution(g_macro)), degree_distribution(g_macro), 
+     type='p', log="xy", xlab = 'Degree', ylab = 'Density', main = "Macrophage")
+average.path.length(g_macro)
+transitivity(g_macro)
+
 # Visualization on RedeR
 rdp <- RedPort()
 calld(rdp, checkcalls=T)
@@ -119,6 +134,21 @@ rtni_Bcell <- tni.bootstrap(rtni_Bcell)
 rtni_Bcell <- tni.dpi.filter(rtni_Bcell)
 tni.regulon.summary(rtni_Bcell)
 g_Bcell <- tni.graph(rtni_Bcell, tfs = Bcell)
+
+# igraph metrics
+print(paste('Combined score :',
+            length(V(g_Bcell)), 'nodes and',
+            length(E(g_Bcell)), 'edges'))
+table(degree(g_Bcell))
+print(paste("Mean degree :", mean(degree(g_Bcell))))
+print(paste("Median degree :", median(degree(g_Bcell))))
+hist(table(degree(g_Bcell)))
+plot(table(degree(g_Bcell)), xlab = "Degree", 
+     ylab = "Occurences", main = "Macrophage")
+plot(1:length(degree_distribution(g_Bcell)), degree_distribution(g_Bcell), 
+     type='p', log="xy", xlab = 'Degree', ylab = 'Density', main = "Macrophage")
+average.path.length(g_Bcell)
+transitivity(g_Bcell)
 
 # Visualization on RedeR
 rdp <- RedPort()
@@ -138,6 +168,41 @@ rtni_Tcell <- tni.dpi.filter(rtni_Tcell)
 tni.regulon.summary(rtni_Tcell)
 g_Tcell <- tni.graph(rtni_Tcell, tfs = Tcell)
 
+# igraph metrics
+print(paste('Combined score :',
+            length(V(g_Tcell)), 'nodes and',
+            length(E(g_Tcell)), 'edges'))
+table(degree(g_Tcell))
+print(paste("Mean degree :", mean(degree(g_Tcell))))
+print(paste("Median degree :", median(degree(g_Tcell))))
+hist(table(degree(g_Tcell)))
+plot(table(degree(g_Tcell)), xlab = "Degree", 
+     ylab = "Occurences", main = "Macrophage")
+plot(1:length(degree_distribution(g_Tcell)), degree_distribution(g_Tcell), 
+     type='p', log="xy", xlab = 'Degree', ylab = 'Density', main = "Macrophage")
+average.path.length(g_Tcell)
+transitivity(g_Tcell)
+
+plot(0:(length(degree_distribution(g_macro))-1), degree_distribution(g_macro), log = 'xy', xlab = 'degree', ylab='p(k)', main='Node degree distribution', col='blue', type = 'p', ylim=c(1e-4, 5e-1))
+points(0:(length(degree_distribution(g_Bcell))-1), degree_distribution(g_Bcell), col='red', type='p')
+points(0:(length(degree_distribution(g_Tcell))-1), degree_distribution(g_Tcell), col='pink', type='p')
+legend('topright', col=c('blue', 'red', 'pink'), legend = c('Macrophage', 'B-cell', 'T-cell'), lty = 1)
+
+# Macrophage against B-cell centralities
+keys <- unique(c(V(g_macro)$name, V(g_Bcell)$name))
+plot(degree(g_macro)[keys], degree(g_Bcell)[keys], pch=20)
+abline(b=1, a=0)
+
+# Macrophage against T-cell centralities
+keys <- unique(c(V(g_macro)$name, V(g_Tcell)$name))
+plot(degree(g_macro)[keys], degree(g_Tcell)[keys], pch=20)
+abline(b=1, a=0)
+
+# T-cell against B-cell centralities
+keys <- unique(c(V(g_Tcell)$name, V(g_Bcell)$name))
+plot(degree(g_Tcell)[keys], degree(g_Bcell)[keys], pch=20)
+abline(b=1, a=0)
+
 # Visualization on RedeR
 rdp <- RedPort()
 calld(rdp, checkcalls=T)
@@ -145,6 +210,7 @@ addGraph(rdp, g_Tcell, layout=NULL)
 addLegend.color(rdp, g_Tcell, type="edge")
 addLegend.shape(rdp, g_Tcell)
 relax(rdp, ps = TRUE)
+
 
 
 ################################################################
@@ -175,8 +241,13 @@ write.table(tT, file=stdout(), row.names=F, sep="\t")
 tTb <- subset(tT, tT$B >= 1.9)
 tTb.entrez <- nuID2EntrezID(tTb$ID, lib.mapping = 'lumiHumanIDMapping')
 tTb <- cbind(tTb, tTb.entrez)
+
 tT.entrez <- nuID2EntrezID(tT$ID, lib.mapping = 'lumiHumanIDMapping')
 tT <- cbind(tT, tT.entrez)
+
+ttp <- subset(tT, tT$adj.P.Val < 0.05)
+ttp.entrez <-  nuID2EntrezID(ttp$ID, lib.mapping = 'lumiHumanIDMapping')
+ttp <- cbind(ttp, ttp.entrez)
 
 # Building different possibilities for the phenotype argument
 b.stat <- tT$B
@@ -186,8 +257,8 @@ logFC <- tT$logFC
 names(logFC) <- rownames(tT)
 
 # Building hits argument
-tTb.hits <- rownames(tTb)
-tTb.hits <- as.character(tTb.hits)
+tTp.hits <- rownames(ttp)
+tTp.hits <- as.character(tTp.hits)
 
 # Building phenoIDs argument
 phenoID <- rownames(tT)

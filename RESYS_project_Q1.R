@@ -6,6 +6,8 @@ library(CoRegNet) # Get the human TFs
 library(lumi) # Convert nuID > entrezID
 library(lumiHumanIDMapping) # Convert nuID > entrezID
 library(org.Hs.eg.db) # Convert TFs SYMBOLS into ENTREZ
+library(stargazer) # Export summary functions as html
+library(igraph)
 
 data("HumanTF_entrezgene")
 
@@ -15,6 +17,7 @@ data("HumanTF_entrezgene")
 current_path = rstudioapi::getActiveDocumentContext()$path 
 setwd(dirname(current_path ))
 print(getwd())
+
 
 
 ################################################################
@@ -51,6 +54,8 @@ LogC <- (qx[5] > 100) ||
   (qx[2] > 0 && qx[2] < 1 && qx[4] > 1 && qx[4] < 2)
 if (LogC) { ex[which(ex <= 0)] <- NaN
 exprs(gset) <- log2(ex) }
+
+
 
 ################################################################
 ####    Network inference     ####
@@ -98,6 +103,16 @@ Bcell <- c("BACH2", "BCL6", "PRDM1", "IRF4", "IRF8", "PAX5", "SPI1",
            "STAT5A", "XBP1")
 Bcell <- mapIds(org.Hs.eg.db, Bcell, "ENTREZID", "SYMBOL")
 
+all <- c("JUN", "IRF1", "IRF5", 
+         "IRF7", "IRF8", "MKI67", "MNDA", "NFKB1", "PCNA", 
+         "PPARG", "SPI1", "STAT1", "STAT3",
+         "IKZF3", "ATM", "BATF", "BCL6", "PRDM1", "FOXP3", "GATA3",
+         "IKZF2", "IKZF1", "IRF4", "TP53",
+         "SSRP1", "STAT4", "TBX21", "TCL1A", "ZBTB7B",
+         "ZAP70", "BACH2", "PAX5", 
+         "STAT5A", "XBP1")
+all <- mapIds(org.Hs.eg.db, all, "ENTREZID", "SYMBOL")
+
 #### Transcriptional Network Inference ####
 # For the macrophage TFs
 rtni_macro <- tni.constructor(expData = as.matrix(exEntrez),
@@ -107,7 +122,26 @@ rtni_macro <- tni.permutation(rtni_macro, nPermutations = 100)
 rtni_macro <- tni.bootstrap(rtni_macro)
 rtni_macro <- tni.dpi.filter(rtni_macro)
 tni.regulon.summary(rtni_macro)
+#stargazer(tni.regulon.summary(rtni_macro), type = "html", out = "macroRTNIQ1sum")
+
 g_macro <- tni.graph(rtni_macro, tfs = macrophage2)
+tni.regulon.summary(rtni_macro, regulatoryElements = "IRF8")
+#stargazer(tni.regulon.summary(rtni_macro, regulatoryElements = "IRF8"), type = "html", out = "macroRTNIQ1sum_IRF8")
+
+# igraph metrics
+print(paste('Combined score :',
+            length(V(g_macro)), 'nodes and',
+            length(E(g_macro)), 'edges'))
+table(degree(g_macro))
+print(paste("Mean degree :", mean(degree(g_macro)))) # 1st neighbourss
+print(paste("Median degree :", median(degree(g_macro))))
+hist(table(degree(g_macro)))
+plot(table(degree(g_macro)), xlab = "Degree", 
+     ylab = "Occurences", main = "Macrophage")
+plot(1:length(degree_distribution(g_macro)), degree_distribution(g_macro), 
+     type='p', log="xy", xlab = 'Degree', ylab = 'Density', main = "Macrophage")
+average.path.length(g_macro)
+transitivity(g_macro)
 
 # Visualization on RedeR
 rdp <- RedPort()
@@ -126,7 +160,24 @@ rtni_Bcell <- tni.permutation(rtni_Bcell, nPermutations = 100)
 rtni_Bcell <- tni.bootstrap(rtni_Bcell)
 rtni_Bcell <- tni.dpi.filter(rtni_Bcell)
 tni.regulon.summary(rtni_Bcell)
+#stargazer(tni.regulon.summary(rtni_Bcell), type = "html", out = "BcellRTNIQ1sum")
+tni.regulon.summary(rtni_Bcell, regulatoryElements = "STAT5A")
 g_Bcell <- tni.graph(rtni_Bcell, tfs = Bcell)
+
+# igraph metrics
+print(paste('Combined score :',
+            length(V(g_Bcell)), 'nodes and',
+            length(E(g_Bcell)), 'edges'))
+table(degree(g_Bcell))
+print(paste("Mean degree :", mean(degree(g_Bcell))))
+print(paste("Median degree :", median(degree(g_Bcell))))
+hist(table(degree(g_Bcell)))
+plot(table(degree(g_Bcell)), xlab = "Degree", 
+     ylab = "Occurences", main = "Macrophage")
+plot(1:length(degree_distribution(g_Bcell)), degree_distribution(g_Bcell), 
+     type='p', log="xy", xlab = 'Degree', ylab = 'Density', main = "Macrophage")
+average.path.length(g_Bcell)
+transitivity(g_Bcell)
 
 # Visualization on RedeR
 rdp <- RedPort()
@@ -144,7 +195,44 @@ rtni_Tcell <- tni.permutation(rtni_Tcell, nPermutations = 100)
 rtni_Tcell <- tni.bootstrap(rtni_Tcell)
 rtni_Tcell <- tni.dpi.filter(rtni_Tcell)
 tni.regulon.summary(rtni_Tcell)
+#stargazer(tni.regulon.summary(rtni_Tcell), type = "html", out = "TcellRTNIQ1sum")
+tni.regulon.summary(rtni_Tcell, regulatoryElements = "IKZF3")
 g_Tcell <- tni.graph(rtni_Tcell, tfs = Tcell)
+
+# igraph metrics
+print(paste('Combined score :',
+            length(V(g_Tcell)), 'nodes and',
+            length(E(g_Tcell)), 'edges'))
+table(degree(g_Tcell))
+print(paste("Mean degree :", mean(degree(g_Tcell))))
+print(paste("Median degree :", median(degree(g_Tcell))))
+hist(table(degree(g_Tcell)))
+plot(table(degree(g_Tcell)), xlab = "Degree", 
+     ylab = "Occurences", main = "Macrophage")
+plot(1:length(degree_distribution(g_Tcell)), degree_distribution(g_Tcell), 
+     type='p', log="xy", xlab = 'Degree', ylab = 'Density', main = "Macrophage")
+average.path.length(g_Tcell)
+transitivity(g_Tcell)
+
+plot(0:(length(degree_distribution(g_macro))-1), degree_distribution(g_macro), log = 'xy', xlab = 'degree', ylab='p(k)', main='Node degree distribution', col='blue', type = 'p', ylim=c(1e-4, 5e-1))
+points(0:(length(degree_distribution(g_Bcell))-1), degree_distribution(g_Bcell), col='red', type='p')
+points(0:(length(degree_distribution(g_Tcell))-1), degree_distribution(g_Tcell), col='pink', type='p')
+legend('topright', col=c('blue', 'red', 'pink'), legend = c('Macrophage', 'B-cell', 'T-cell'), lty = 1)
+
+# Macrophage against B-cell centralities
+keys <- unique(c(V(g_macro)$name, V(g_Bcell)$name))
+plot(degree(g_macro)[keys], degree(g_Bcell)[keys], pch=20)
+abline(b=1, a=0)
+
+# Macrophage against T-cell centralities
+keys <- unique(c(V(g_macro)$name, V(g_Tcell)$name))
+plot(degree(g_macro)[keys], degree(g_Tcell)[keys], pch=20)
+abline(b=1, a=0)
+
+# T-cell against B-cell centralities
+keys <- unique(c(V(g_Tcell)$name, V(g_Bcell)$name))
+plot(degree(g_Tcell)[keys], degree(g_Bcell)[keys], pch=20)
+abline(b=1, a=0)
 
 # Visualization on RedeR
 rdp <- RedPort()
@@ -152,6 +240,43 @@ calld(rdp, checkcalls=T)
 addGraph(rdp, g_Tcell, layout=NULL)
 addLegend.color(rdp, g_Tcell, type="edge")
 addLegend.shape(rdp, g_Tcell)
+relax(rdp, ps = TRUE)
+
+# ALL TFs
+rtni_all <- tni.constructor(expData = as.matrix(exEntrez),
+                              regulatoryElements = all,
+                              rowAnnotation = rowAnnotation)
+rtni_all <- tni.permutation(rtni_all, nPermutations = 100)
+rtni_all <- tni.bootstrap(rtni_all)
+rtni_all <- tni.dpi.filter(rtni_all)
+tni.regulon.summary(rtni_all)
+#stargazer(tni.regulon.summary(rtni_macro), type = "html", out = "macroRTNIQ1sum")
+
+g_all <- tni.graph(rtni_all, tfs = all)
+tni.regulon.summary(rtni_all, regulatoryElements = "IRF8")
+#stargazer(tni.regulon.summary(rtni_macro, regulatoryElements = "IRF8"), type = "html", out = "macroRTNIQ1sum_IRF8")
+
+# igraph metrics
+print(paste('Combined score :',
+            length(V(g_all)), 'nodes and',
+            length(E(g_all)), 'edges'))
+table(degree(g_all))
+print(paste("Mean degree :", mean(degree(g_all)))) # 1st neighbourss
+print(paste("Median degree :", median(degree(g_all))))
+hist(table(degree(g_all)))
+plot(table(degree(g_all)), xlab = "Degree", 
+     ylab = "Occurences", main = "All immune cell types TFs")
+plot(1:length(degree_distribution(g_all)), degree_distribution(g_all), 
+     type='p', log="xy", xlab = 'Degree', ylab = 'Density', main = "All immune cell types TFs")
+average.path.length(g_all)
+transitivity(g_all)
+
+# Visualization on RedeR
+rdp <- RedPort()
+calld(rdp, checkcalls=T)
+addGraph(rdp, g_all, layout=NULL)
+addLegend.color(rdp, g_all, type="edge")
+addLegend.shape(rdp, g_all)
 relax(rdp, ps = TRUE)
 
 ################################################################
@@ -178,6 +303,8 @@ volcanoplot(fit2, highlight = 15)
 
 # Possibly add heatmaps, pathways analysis, GSEA ...
 
+
+
 ################################################################
 ####    Transcriptional Network Analysis    ####
 ################################################################
@@ -186,8 +313,13 @@ volcanoplot(fit2, highlight = 15)
 tTb <- subset(tT, tT$B >= 1.9)
 tTb.entrez <- nuID2EntrezID(tTb$ID, lib.mapping = 'lumiHumanIDMapping')
 tTb <- cbind(tTb, tTb.entrez)
+
 tT.entrez <- nuID2EntrezID(tT$ID, lib.mapping = 'lumiHumanIDMapping')
 tT <- cbind(tT, tT.entrez)
+
+ttp <- subset(tT, tT$adj.P.Val < 0.05)
+ttp.entrez <-  nuID2EntrezID(ttp$ID, lib.mapping = 'lumiHumanIDMapping')
+ttp <- cbind(ttp, ttp.entrez)
 
 # Building different possibilities for the phenotype argument
 b.stat <- tT$B
@@ -197,8 +329,8 @@ logFC <- tT$logFC
 names(logFC) <- rownames(tT)
 
 # Building hits argument
-tTb.hits <- rownames(tTb)
-tTb.hits <- as.character(tTb.hits)
+tTp.hits <- rownames(ttp)
+tTp.hits <- as.character(tTp.hits)
 
 # Building phenoIDs argument
 phenoID <- rownames(tT)
@@ -333,6 +465,50 @@ head(gsea2_Tcell$differential)
 # Plot GSEA-2T results
 tna.plot.gsea2(rtna_Tcell, labPheno="log2 fold changes", tfs="IKZF3",
                file = "tna_gsea2_tcell")
+
+#### TNA for all TFs ####
+
+# Input 1: 'object', a TNI object with regulons
+# Input 2: 'phenotype', a named numeric vector, usually log2 differential expression levels
+# Input 3: 'hits', a character vector, usually a set of differentially expressed genes
+# Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
+rtna_all <- tni2tna.preprocess(object = rtni_all,
+                                 phenotype = logFC,
+                                 hits = tTb.hits,
+                                 phenoIDs = phenoID)
+
+# Run the MRA method
+rtna_all <- tna.mra(rtna_all)
+
+# Get MRA results;
+#..setting 'ntop = -1' will return all results, regardless of a threshold
+mra_all <- tna.get(rtna_all, what="mra", ntop = -1)
+head(mra_all)
+
+# Run the GSEA method
+# Please set nPermutations >= 1000
+rtna_all <- tna.gsea1(rtna_all, stepFilter=FALSE, nPermutations=100)
+
+# Get GSEA results
+gsea1_all <- tna.get(rtna_all, what="gsea1", ntop = -1)
+head(gsea1_all)
+
+# Plot GSEA results
+tna.plot.gsea1(rtna_all, labPheno="abs(log2 fold changes)", ntop = -1,
+               file = "tna_gsea_all")
+
+# Run the GSEA-2T method
+# Please set nPermutations >= 1000
+rtna_all <- tna.gsea2(rtna_all, stepFilter = FALSE, nPermutations = 100)
+
+# Get GSEA-2T results
+gsea2_all <- tna.get(rtna_all, what = "gsea2", ntop = -1)
+head(gsea2_all$differential)
+
+# Plot GSEA-2T results
+tna.plot.gsea2(rtna_all, labPheno="log2 fold changes", tfs="IRF8",
+               file = "tna_gsea2_all")
+
 
 
 ################################################################
