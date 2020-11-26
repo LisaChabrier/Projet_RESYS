@@ -272,7 +272,7 @@ phenoID <- cbind(phenoID, tT.entrez)
 # Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
 rtna_macro <- tni2tna.preprocess(object = rtni_macro,
                                  phenotype = logFC,
-                                 hits = tTb.hits,
+                                 hits = tTp.hits,
                                  phenoIDs = phenoID)
 
 # Run the MRA method
@@ -316,7 +316,7 @@ tna.plot.gsea2(rtna_macro, labPheno="log2 fold changes", tfs="IRF7",
 # Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
 rtna_Bcell <- tni2tna.preprocess(object = rtni_Bcell,
                                  phenotype = logFC,
-                                 hits = tTb.hits,
+                                 hits = tTp.hits,
                                  phenoIDs = phenoID)
 
 # Run the MRA method
@@ -359,7 +359,7 @@ tna.plot.gsea2(rtna_Bcell, labPheno="log2 fold changes", tfs="IRF8",
 # Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
 rtna_Tcell <- tni2tna.preprocess(object = rtni_Tcell,
                                  phenotype = logFC,
-                                 hits = tTb.hits,
+                                 hits = tTp.hits,
                                  phenoIDs = phenoID)
 
 # Run the MRA method

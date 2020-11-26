@@ -143,6 +143,7 @@ plot(1:length(degree_distribution(g_macro)), degree_distribution(g_macro),
 average.path.length(g_macro)
 transitivity(g_macro)
 
+
 # Visualization on RedeR
 rdp <- RedPort()
 calld(rdp, checkcalls=T)
@@ -214,10 +215,10 @@ plot(1:length(degree_distribution(g_Tcell)), degree_distribution(g_Tcell),
 average.path.length(g_Tcell)
 transitivity(g_Tcell)
 
-plot(0:(length(degree_distribution(g_macro))-1), degree_distribution(g_macro), log = 'xy', xlab = 'degree', ylab='p(k)', main='Node degree distribution', col='blue', type = 'p', ylim=c(1e-4, 5e-1))
+plot(0:(length(degree_distribution(g_macro))-1), degree_distribution(g_macro), log = 'xy', xlab = 'degree', ylab='p(k)', main='Node degree distribution', col='orange', type = 'p', ylim=c(1e-4, 5e-1))
 points(0:(length(degree_distribution(g_Bcell))-1), degree_distribution(g_Bcell), col='red', type='p')
 points(0:(length(degree_distribution(g_Tcell))-1), degree_distribution(g_Tcell), col='pink', type='p')
-legend('topright', col=c('blue', 'red', 'pink'), legend = c('Macrophage', 'B-cell', 'T-cell'), lty = 1)
+legend('topright', col=c('orange', 'red', 'pink'), legend = c('Macrophage', 'B-cell', 'T-cell'), lty = 1)
 
 # Macrophage against B-cell centralities
 keys <- unique(c(V(g_macro)$name, V(g_Bcell)$name))
@@ -240,7 +241,7 @@ calld(rdp, checkcalls=T)
 addGraph(rdp, g_Tcell, layout=NULL)
 addLegend.color(rdp, g_Tcell, type="edge")
 addLegend.shape(rdp, g_Tcell)
-relax(rdp, ps = TRUE)
+relax(rdp, ps = TRUE, p1 = 30, p2 = 400, p4 = 40, p7 = 40, p8 = 100)
 
 # ALL TFs
 rtni_all <- tni.constructor(expData = as.matrix(exEntrez),
@@ -344,7 +345,7 @@ phenoID <- cbind(phenoID, tT.entrez)
 # Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
 rtna_macro <- tni2tna.preprocess(object = rtni_macro,
                                  phenotype = logFC,
-                                 hits = tTb.hits,
+                                 hits = tTp.hits,
                                  phenoIDs = phenoID)
 
 # Run the MRA method
@@ -376,7 +377,7 @@ gsea2_macro <- tna.get(rtna_macro, what = "gsea2", ntop = -1)
 head(gsea2_macro$differential)
 
 # Plot GSEA-2T results
-tna.plot.gsea2(rtna_macro, labPheno="log2 fold changes", tfs="IRF7",
+tna.plot.gsea2(rtna_macro, labPheno="log2 fold changes", tfs="IRF8",
                file = "tna_gsea2_macro")
 
 
@@ -388,7 +389,7 @@ tna.plot.gsea2(rtna_macro, labPheno="log2 fold changes", tfs="IRF7",
 # Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
 rtna_Bcell <- tni2tna.preprocess(object = rtni_Bcell,
                                  phenotype = logFC,
-                                 hits = tTb.hits,
+                                 hits = tTp.hits,
                                  phenoIDs = phenoID)
 
 # Run the MRA method
@@ -431,7 +432,7 @@ tna.plot.gsea2(rtna_Bcell, labPheno="log2 fold changes", tfs="BACH2",
 # Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
 rtna_Tcell <- tni2tna.preprocess(object = rtni_Tcell,
                                  phenotype = logFC,
-                                 hits = tTb.hits,
+                                 hits = tTp.hits,
                                  phenoIDs = phenoID)
 
 # Run the MRA method
@@ -474,7 +475,7 @@ tna.plot.gsea2(rtna_Tcell, labPheno="log2 fold changes", tfs="IKZF3",
 # Input 4: 'phenoIDs', an optional data frame with gene anottation mapped to the phenotype
 rtna_all <- tni2tna.preprocess(object = rtni_all,
                                  phenotype = logFC,
-                                 hits = tTb.hits,
+                                 hits = tTp.hits,
                                  phenoIDs = phenoID)
 
 # Run the MRA method
